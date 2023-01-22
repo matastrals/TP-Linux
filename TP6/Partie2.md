@@ -142,40 +142,86 @@ Sun 2023-01-22 04:00:00 CET 6h left       n/a                         n/a
 
 ### 1. Serveur NFS
 
-> On a déjà fait ça au TP4 ensemble :)
+🌞 **Préparer un dossier à partager sur le réseau** 
 
-🖥️ **VM `storage.tp6.linux`**
-
-**N'oubliez pas de dérouler la [📝**checklist**📝](../../2/README.md#checklist).**
-
-🌞 **Préparer un dossier à partager sur le réseau** (sur la machine `storage.tp6.linux`)
-
-- créer un dossier `/srv/nfs_shares`
-- créer un sous-dossier `/srv/nfs_shares/web.tp6.linux/`
-
-> Et ouais pour pas que ce soit le bordel, on va appeler le dossier comme la machine qui l'utilisera :)
+```
+[matastral@storagetp6linux ~]$ sudo mkdir /srv/nfs_shares
+[matastral@storagetp6linux ~]$ sudo mkdir /srv/nfs_shares/web.tp6.linux
+```
 
 🌞 **Installer le serveur NFS** (sur la machine `storage.tp6.linux`)
 
-- installer le paquet `nfs-utils`
-- créer le fichier `/etc/exports`
-  - remplissez avec un contenu adapté
-  - j'vous laisse faire les recherches adaptées pour ce faire
-- ouvrir les ports firewall nécessaires
-- démarrer le service
-- je vous laisse check l'internet pour trouver [ce genre de lien](https://www.digitalocean.com/community/tutorials/how-to-set-up-an-nfs-mount-on-rocky-linux-9) pour + de détails
+```
+[matastral@storagetp6linux ~]$ sudo dnf install nfs-utils
+```
+```
+[matastral@storagetp6linux ~]$ cat /etc/exports
+/srv/nfs_shares/web.tp6.linux/          10.105.1.11(rw,sync,no_subtree_check)
+```
+```
+[matastral@storagetp6linux ~]$ sudo firewall-cmd --permanent --add-service=n
+fs
+success
+[matastral@storagetp6linux ~]$ sudo firewall-cmd --permanent --add-service=mountd
+success
+[matastral@storagetp6linux ~]$ sudo firewall-cmd --permanent --add-service=rpc-bind
+success
+[matastral@storagetp6linux ~]$ sudo firewall-cmd --reload
+success
+```
+```
+[matastral@storagetp6linux ~]$ sudo systemctl enable nfs-server
+Created symlink /etc/systemd/system/multi-user.target.wants/nfs-server.service → /usr/lib/systemd/system/nfs-server.service.
+[matastral@storagetp6linux ~]$ sudo systemctl start nfs-server
+[matastral@storagetp6linux ~]$ sudo systemctl status nfs-server
+● nfs-server.service - NFS server and services
+     Loaded: loaded (/usr/lib/systemd/system/nfs-server.service; enabled; v>
+    Drop-In: /run/systemd/generator/nfs-server.service.d
+             └─order-with-mounts.conf
+     Active: active (exited) since Sun 2023-01-22 22:06:07 CET; 6s ago
+    Process: 2138 ExecStartPre=/usr/sbin/exportfs -r (code=exited, status=0>
+    Process: 2139 ExecStart=/usr/sbin/rpc.nfsd (code=exited, status=0/SUCCE>
+    Process: 2156 ExecStart=/bin/sh -c if systemctl -q is-active gssproxy; >
+   Main PID: 2156 (code=exited, status=0/SUCCESS)
+        CPU: 14ms
+```
 
 ### 2. Client NFS
 
 🌞 **Installer un client NFS sur `web.tp6.linux`**
 
-- il devra monter le dossier `/srv/nfs_shares/web.tp6.linux/` qui se trouve sur `storage.tp6.linux`
-- le dossier devra être monté sur `/srv/backup/`
-- je vous laisse là encore faire vos recherches pour réaliser ça !
-- faites en sorte que le dossier soit automatiquement monté quand la machine s'allume
+```
+[matastral@webtp6linux ~]$ sudo dnf install nfs-utils
+```
+```
+[matastral@webtp6linux ~]$ sudo firewall-cmd --add-source=10.105.1.4 --permanent
+[sudo] password for matastral:
+success
+```
+```
+[matastral@webtp6linux ~]$ sudo firewall-cmd --reload
+success
+```
+```
+[matastral@webtp6linux ~]$ sudo mount 10.105.1.4:/srv/nfs_shares/web.tp6.lin
+ux /srv/backup/
+[matastral@webtp6linux ~]$ cat /etc/fstab
+
+#
+# /etc/fstab
+# Created by anaconda on Fri Oct 14 08:56:01 2022
+#
+# Accessible filesystems, by reference, are maintained under '/dev/disk/'.
+# See man pages fstab(5), findfs(8), mount(8) and/or blkid(8) for more info.
+#
+# After editing this file, run 'systemctl daemon-reload' to update systemd
+# units generated from this file.
+#
+/dev/mapper/rl-root     /                       xfs     defaults        0 0
+UUID=24e07afa-94aa-4137-b350-793d90ff40c5 /boot                   xfs     defaults        0 0
+/dev/mapper/rl-swap     none                    swap    defaults        0 0
+```
 
 🌞 **Tester la restauration des données** sinon ça sert à rien :)
 
-- livrez-moi la suite de commande que vous utiliseriez pour restaurer les données dans une version antérieure
-
-![Backup everything](../pics/backup_everything.jpg)
+Pour une [Partie 3](Partie3.md)
